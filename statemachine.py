@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 
 
+import json
+
+
 class StateMachine:
 
 	def __init__(self):
@@ -20,6 +23,7 @@ class StateMachine:
 		self.startState = name.upper()
 
 	def process(self,cargo):
+		originCargo = cargo
 		self.detailList = []
 		try:
 			handler = self.handlers[self.startState]
@@ -28,14 +32,28 @@ class StateMachine:
 		if not self.endStates:
 			raise InitialzationError("at least one state must be an end_state") 
 
-		while True:
-			(newState,cargo,returnList) = handler(cargo,self.detailList)
+		verified = True
 
-			if newState.upper() in self.endStates:
-				# print("reached ",newState,",".join([x[0] + "|" + x[1].encode("utf8") for x in returnList]))
-				for x,y in returnList:
-					print x,y
-				
+		while True:
+			try:
+				(newState,cargo,returnList) = handler(cargo,self.detailList)
+
+				if newState.upper() in self.endStates:
+					break
+				else:
+					handler = self.handlers[newState.upper()]
+
+			except Exception as e:
+				print "Error Parse:",originCargo
+				verified = False
 				break
-			else:
-				handler = self.handlers[newState.upper()]
+
+		returnDict = {}
+		if verified:
+			for part in self.detailList:
+				state,value = part
+				if state not in returnDict:
+					returnDict[state] = []
+				returnDict[state].append(value.encode("utf8"))
+
+		print originCargo + ": " + json.dumps(returnDict,ensure_ascii=False)
